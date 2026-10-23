@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Galerie du kit</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700&display=swap">
+<style>
+  body { margin: 0; padding: 40px 16px; background: #F5F5F7; font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; color: #1D1D1F; }
+  main { max-width: 1120px; margin: 0 auto; display: grid; gap: 40px; }
+  h1 { margin: 0; font-size: 32px; letter-spacing: -.03em; }
+  h2 { margin: 0 0 14px; font-size: 20px; letter-spacing: -.02em; }
+  .grille { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+  figure { margin: 0; background: #fff; border-radius: 20px; padding: 14px; box-shadow: 0 18px 50px rgba(0,0,0,.07), 0 2px 6px rgba(0,0,0,.04); }
+  .boite { position: relative; aspect-ratio: 360 / 220; border-radius: 12px; background: #F5F5F7; overflow: hidden; }
+  .boite.sombre { background: radial-gradient(circle at 50% 90%, #272727 0, #000 120%); }
+  .boite > .echelle { position: absolute; left: 0; top: 0; width: 360px; height: 220px; transform-origin: 0 0; }
+  figcaption { padding-top: 10px; } figcaption b { display: block; } figcaption span { color: #6E6E73; font-size: 14px; }
+  code { font: 13px ui-monospace, Menlo, monospace; background: #EEEEF1; padding: 1px 6px; border-radius: 6px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Galerie du kit</h1>
+  <section><h2>Les UI</h2><div class="grille" id="ui"></div></section>
+  <section><h2>Les sous-titres</h2><div class="grille" id="st"></div></section>
+</main>
+<script src="motion/motion.js"></script>
+<script src="ui/composants.js"></script>
+<script src="sous-titres/sous-titres.js"></script>
+<script>
+  // ?t=2.5 fige toutes les animations à 2,5 s (pour une capture)
+  const fige = parseFloat(new URLSearchParams(location.search).get("t"));
+  const joueurs = [];
+  function carte(parent, nom, titre, texte, sombre) {
+    const f = document.createElement("figure");
+    f.innerHTML = `<div class="boite${sombre ? " sombre" : ""}"><div class="echelle"></div></div><figcaption><b>${titre}</b><span>${texte}</span><br><code>${nom}</code></figcaption>`;
+    parent.appendChild(f);
+    const boite = f.querySelector(".boite"), ech = f.querySelector(".echelle");
+    const ajuste = () => { ech.style.transform = `scale(${boite.clientWidth / 360})`; };
+    ajuste(); addEventListener("resize", ajuste);
+    return ech;
+  }
+  UI.LISTE.forEach(([nom, titre, texte]) => { const c = carte(ui, "UI." + nom, titre, texte); joueurs.push({ f: UI[nom](c), boucle: 4.5 }); });
+  const phrases = [["Le rythme décide tout", { cle: 1 }], ["Coupe dans les creux", { cle: 3 }], ["Le carnet retient tout", { cle: 1 }]];
+  SOUS_TITRES.LISTE.forEach(([nom, titre, texte], i) => {
+    const c = carte(st, "SOUS_TITRES." + nom, titre, texte, true);
+    joueurs.push({ f: SOUS_TITRES[nom](c, phrases[i][0], Object.assign({ taille: 30, y: 150 }, phrases[i][1])), boucle: 3.5 });
+  });
+  if (!isNaN(fige)) joueurs.forEach(j => j.f(fige));
+  else { const t0 = performance.now(); const tic = n => { const t = (n - t0) / 1000; joueurs.forEach(j => j.f(t % j.boucle)); requestAnimationFrame(tic); }; requestAnimationFrame(tic); }
+</script>
+</body>
+</html>

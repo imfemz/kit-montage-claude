@@ -1,0 +1,1 @@
+Dépose tes rushs ici. Ce dossier est ignoré par git.

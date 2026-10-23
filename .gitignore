@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+.pytest_cache/
+projets/*
+!projets/LISEZ-MOI.txt
+*.mp4
+*.mov
+*.wav
+.DS_Store
