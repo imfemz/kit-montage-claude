@@ -1,6 +1,6 @@
 # Kit montage Claude
 
-Une base propre pour monter tes vidéos avec Claude Code : dérush mot à mot, rythme mesuré, animations d'UI aux bonnes courbes, son, export, et un carnet qui retient chacune de tes corrections.
+Une base propre pour monter tes vidéos avec Claude Code : dérush mot à mot, rythme mesuré, zooms au bon moment, animations d'UI et cartes en verre aux bonnes courbes, son, export, et un carnet qui retient chacune de tes corrections.
 
 Présentation animée des commandes : https://claude.ai/artifact/LuNdTPL28t9CwLe8UknYeT
 
@@ -24,6 +24,7 @@ Ouvre Claude Code dans le dossier (`claude`), dépose ta vidéo dans `projets/`,
 |---|---|
 | `/montage derush projets/ma-video.mp4` | couper les blancs sans toucher un mot |
 | `/montage rythme` | trouver les trous de plus de 4 s |
+| `/montage zooms` | placer les zooms au début des phrases qui comptent |
 | `/montage ui une carte titre qui arrive` | animer une UI avec les bonnes courbes |
 | `/montage son projets/ma-video.mp4` | mesurer le niveau, caler la musique |
 | `/montage export projets/rough-cut.mp4` | sortir à −14 LUFS |
@@ -33,17 +34,19 @@ Ouvre Claude Code dans le dossier (`claude`), dépose ta vidéo dans `projets/`,
 
 ```
 .claude/skills/montage/   le skill (la méthode)
-scripts/                  transcription, dérush, coupe, test des marqueurs, niveau, export
+scripts/                  transcription, dérush, coupe, vérification d'une coupe, zooms, test des marqueurs, niveau, export
 motion/                   les courbes d'animation (web : motion.js, After Effects : after-effects.md)
-ui/                       6 UI animées tirées de mes vidéos
+ui/                       6 UI animées tirées de mes vidéos + mes cartes en verre au glow bleu (verre.js)
 sous-titres/              3 styles de sous-titres
 galerie.html              tout voir bouger (ouvre-la dans ton navigateur)
-carnet/CARNET.md          le carnet des corrections, avec 12 exemples réels
+carnet/CARNET.md          le carnet des corrections, avec 17 exemples réels
 ```
 
 ## Ce qui est testé, et ce qui ne l'est pas encore
 
-- Les scripts ont 36 tests automatiques (`.venv/bin/python -m pytest`) et ont tourné de bout en bout sur une vraie vidéo.
+- Les scripts ont 45 tests automatiques (`.venv/bin/python -m pytest`) et ont tourné de bout en bout sur une vraie vidéo.
+- Le dérush pose ses bornes sur l'énergie de la voix : Whisper fait souvent commencer le premier mot après un silence trop tôt, `derush.py` le recale.
+- `zooms.py` et `verifier_coupe.py` (la re-transcription d'une coupe) sont testés sur des signaux de synthèse, pas encore sur beaucoup de vrais rushs.
 - Le dérush ne coupe pas un « blanc » qui contient du son (musique, effet) : il te le liste pour écoute. `--couper-blancs-sonores` force la coupe.
 - Il n'a pas encore été essayé sur beaucoup de rushs bruts : si une coupe tombe mal, ajoute-la au carnet et ouvre une issue.
 

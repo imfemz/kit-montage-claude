@@ -19,6 +19,11 @@ raccourci ; il est listé dans « blancs_sonores_non_coupes » pour être écout
 Les « reprises possibles » (une même suite d'au moins 3 mots répétée à moins de
 10 s d'écart) sont listées pour validation humaine, jamais coupées.
 
+Bornes posées sur l'ÉNERGIE, pas sur les heures de Whisper : après un silence, Whisper fait souvent
+commencer le premier mot 0,3 à 0,6 s trop tôt (dans le silence). Avant de chercher les blancs, le début
+de ces mots est avancé jusqu'à l'attaque réelle de la voix (recaler_debuts) ; le transcript recalé est
+écrit à côté (transcript.recale.json), c'est lui qu'il faut donner à couper.py. --sans-recalage désactive.
+
 Sortie (cutlist.json) : {"segments": [{"debut": s, "fin": s}, ...], "blancs_raccourcis": [...],
 "reprises_possibles": [...], "duree_source": s, "duree_apres": s, ...}
 """
@@ -45,6 +50,9 @@ PENALITE_DB = 6.0       # coût (en dB d'énergie cumulée) d'un écart de 100 %
 TOLERANCE_GARDE = (0.7, 1.5)   # la durée gardée peut varier entre 70 % et 150 % de --garder
 SOUS_LA_VOIX_DB = 12.0  # au-dessus de (voix − 12 dB), un passage sans mot contient du son
 SON_MIN = 0.15          # une plage sonore de 150 ms dans la partie à retirer bloque la coupe
+PAROLE_SOUS_P95_DB = 38.0   # la voix « commence » au-dessus de (95e centile − 38 dB), mesuré sur de vrais rushs face cam
+RECALAGE_MAX = 0.7      # Whisper avance le 1er mot de 0,3 à 0,6 s : on ne le recule jamais de plus de 0,7 s
+ATTAQUE_MIN = 0.03      # 30 ms au-dessus du seuil : une attaque, pas un clic
 
 
 # --------------------------------------------------------------------------- énergie
@@ -114,6 +122,39 @@ def blancs(mots: list[dict], duree: float) -> list[tuple[float, float, str]]:
         fin_max = max(fin_max, m["fin"])
     out.append((fin_max, duree, "fin"))
     return out
+
+
+def seuil_parole(db: np.ndarray) -> float:
+    """Niveau où la voix commence : 38 dB sous son 95e centile, et au moins 6 dB au-dessus du bruit de fond."""
+    return max(float(np.percentile(db, 95)) - PAROLE_SOUS_P95_DB, float(np.percentile(db, 10)) + 6.0)
+
+
+def recaler_debuts(mots: list[dict], db: np.ndarray, pas: float = PAS, ecart_min: float = 0.15,
+                   fenetre: float = RECALAGE_MAX) -> tuple[list[dict], int]:
+    """Avance le début de chaque mot qui suit un blanc (≥ ecart_min) jusqu'à l'attaque réelle de la voix :
+    la 1re plage d'au moins 30 ms au-dessus du seuil de parole, cherchée entre l'heure de Whisper et
+    min(fin du mot, heure + fenetre). Un mot dont l'heure tombe déjà dans la voix ne bouge pas, et un
+    mot ne recule jamais : en cas de doute on garde l'heure de Whisper. Rend (mots, nombre de recalés)."""
+    mots = mots_tries(mots)
+    seuil = seuil_parole(db)
+    fort = db > seuil
+    n_attaque = max(1, int(round(ATTAQUE_MIN / pas)))
+    out, recales, fin_prec = [], 0, -math.inf
+    for m in mots:
+        d, f = m["debut"], m["fin"]
+        if d - fin_prec >= ecart_min:
+            k0 = max(0, int(math.floor(d / pas)))
+            k1 = min(len(db), int(math.floor(min(f - 0.05, d + fenetre) / pas)))
+            if k0 < len(db) and not fort[k0:k0 + n_attaque].all():
+                for k in range(k0, max(k0, k1 - n_attaque + 1)):
+                    if fort[k:k + n_attaque].all():
+                        if k * pas > d + 1e-9:
+                            m = {**m, "debut": round(k * pas, 3), "debut_whisper": d}
+                            recales += 1
+                        break
+        out.append(m)
+        fin_prec = max(fin_prec, f)
+    return out, recales
 
 
 def planifier_blanc(a: float, b: float, sorte: str, db: np.ndarray, grille: Grille,
@@ -297,6 +338,9 @@ def main(argv=None) -> int:
     ap.add_argument("--reprise-ecart", type=float, default=10.0, help="écart maximal entre deux prises, en s (défaut : 10)")
     ap.add_argument("--couper-blancs-sonores", action="store_true",
                     help="raccourcit aussi les blancs où l'on entend du son sans mot transcrit (désactivé par défaut)")
+    ap.add_argument("--sans-recalage", action="store_true",
+                    help="garde les heures de Whisper telles quelles (par défaut, le début des mots qui suivent un blanc "
+                         "est recalé sur l'attaque réelle de la voix)")
     ap.add_argument("--sortie", help="fichier de sortie (défaut : cutlist.json à côté de la vidéo)")
     a = ap.parse_args(argv)
 
@@ -321,6 +365,12 @@ def main(argv=None) -> int:
     print("analyse de l'énergie de la voix…", file=sys.stderr)
     db = rms_par_fenetre(decoder_audio(video, SR))
     grille = Grille(info["fps"], info["decalage_video"])
+    recales, tr_recale = 0, None
+    if not a.sans_recalage:
+        mots, recales = recaler_debuts(mots, db)
+        if recales:
+            tr_recale = Path(a.transcript).with_name(Path(a.transcript).stem + ".recale.json")
+            ecrire_json(tr_recale, {**tr, "mots": mots, "recalage": "début des mots recalé sur l'attaque de la voix (derush.py)"})
 
     segments, raccourcis, sonores = planifier(mots, duree, db, grille, a.blanc_min, a.garder, a.marge,
                                               a.couper_blancs_sonores)
@@ -337,12 +387,17 @@ def main(argv=None) -> int:
         "duree_apres": round(duree_apres, 3),
         "fps": str(info["fps"]) if info["fps"] else None,
         "parametres": {"blanc_min": a.blanc_min, "garder": a.garder, "marge": a.marge},
+        "mots_recales": recales,
+        "transcript": tr_recale.name if tr_recale else Path(a.transcript).name,
         "segments": segments,
         "blancs_raccourcis": raccourcis,
         "blancs_sonores_non_coupes": sonores,
         "reprises_possibles": reprises,
     })
 
+    if recales:
+        print(f"mots recalés sur l'attaque de la voix (Whisper les faisait commencer trop tôt) : {recales} "
+              f"→ {tr_recale.name}, à donner à couper.py")
     print(f"blancs raccourcis : {len(raccourcis)} (≥ {a.blanc_min:g} s) — aucun mot retiré")
     print(f"durée : {fmt_duree(duree)} → {fmt_duree(duree_apres)} "
           f"(−{fmt_duree(duree - duree_apres)}, {len(segments)} segments, {max(0, len(segments) - 1)} raccords)")

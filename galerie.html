@@ -15,6 +15,9 @@
   .boite { position: relative; aspect-ratio: 360 / 220; border-radius: 12px; background: #F5F5F7; overflow: hidden; }
   .boite.sombre { background: radial-gradient(circle at 50% 90%, #272727 0, #000 120%); }
   .boite > .echelle { position: absolute; left: 0; top: 0; width: 360px; height: 220px; transform-origin: 0 0; }
+  .boite.hd { aspect-ratio: 16 / 9; background: #000; }
+  .boite.hd > .echelle { width: 1920px; height: 1080px; }
+  .grille.large { grid-template-columns: minmax(0, 1fr); }
   figcaption { padding-top: 10px; } figcaption b { display: block; } figcaption span { color: #6E6E73; font-size: 14px; }
   code { font: 13px ui-monospace, Menlo, monospace; background: #EEEEF1; padding: 1px 6px; border-radius: 6px; }
 </style>
@@ -23,25 +26,29 @@
 <main>
   <h1>Galerie du kit</h1>
   <section><h2>Les UI</h2><div class="grille" id="ui"></div></section>
+  <section><h2>Le verre</h2><div class="grille large" id="verre"></div></section>
   <section><h2>Les sous-titres</h2><div class="grille" id="st"></div></section>
 </main>
 <script src="motion/motion.js"></script>
 <script src="ui/composants.js"></script>
+<script src="ui/verre.js"></script>
 <script src="sous-titres/sous-titres.js"></script>
 <script>
   // ?t=2.5 fige toutes les animations à 2,5 s (pour une capture)
   const fige = parseFloat(new URLSearchParams(location.search).get("t"));
   const joueurs = [];
-  function carte(parent, nom, titre, texte, sombre) {
+  function carte(parent, nom, titre, texte, sombre, hd) {
     const f = document.createElement("figure");
-    f.innerHTML = `<div class="boite${sombre ? " sombre" : ""}"><div class="echelle"></div></div><figcaption><b>${titre}</b><span>${texte}</span><br><code>${nom}</code></figcaption>`;
+    f.innerHTML = `<div class="boite${sombre ? " sombre" : ""}${hd ? " hd" : ""}"><div class="echelle"></div></div><figcaption><b>${titre}</b><span>${texte}</span><br><code>${nom}</code></figcaption>`;
     parent.appendChild(f);
     const boite = f.querySelector(".boite"), ech = f.querySelector(".echelle");
-    const ajuste = () => { ech.style.transform = `scale(${boite.clientWidth / 360})`; };
+    const ajuste = () => { ech.style.transform = `scale(${boite.clientWidth / (hd ? 1920 : 360)})`; };
     ajuste(); addEventListener("resize", ajuste);
     return ech;
   }
   UI.LISTE.forEach(([nom, titre, texte]) => { const c = carte(ui, "UI." + nom, titre, texte); joueurs.push({ f: UI[nom](c), boucle: 4.5 }); });
+  // le verre : une image HD (1920 × 1080) mise à l'échelle ; il lui faut une image derrière lui (ici un décor sobre)
+  UI.VERRE.forEach(([nom, titre, texte, o]) => { const c = carte(verre, "UI." + nom, titre, texte, true, true); joueurs.push({ f: UI[nom](c, o), boucle: nom === "verre" ? 6.2 : 4.2 }); });
   const phrases = [["Le rythme décide tout", { cle: 1 }], ["Coupe dans les creux", { cle: 3 }], ["Le carnet retient tout", { cle: 1 }]];
   SOUS_TITRES.LISTE.forEach(([nom, titre, texte], i) => {
     const c = carte(st, "SOUS_TITRES." + nom, titre, texte, true);

@@ -52,9 +52,24 @@ value + [0, 5.5 * k];
 
 Même calcul de `k` pour l'échelle (`value * (1 + 0.013 * k)`) et la rotation (`value + 0.55 * k`, sens alterné d'un branchement à l'autre).
 
+## Zoom face cam (mesuré sur 44 zooms d'un YouTuber, 24/10/2026)
+
+Deux clés d'échelle : 100 → 108,5 % (ou l'inverse) en **0,85 s**. Éditeur de vitesse :
+
+| Clé | Influence sortante | Influence entrante | Vitesse |
+|---|---|---|---|
+| 1re | 35 % | — | 0 |
+| 2e | — | 73 % | 0 |
+
+Même courbe en web : `cubic-bezier(0.35, 0, 0.27, 1)` (25 / 75 / 95 % du trajet à 25 / 50 / 75 % du temps). Au début d'une phrase qui fait tourner le récit, jamais sur le mot accentué, avec un whoosh grave qui démarre avec la clé.
+
+## Étiquette de 2 mots (même source)
+
+Échelle 65 → 100 % en **0,8 s**, sans dépasser : 1re clé à vitesse ≈ 39 %/s et influence 28 %, 2e clé à vitesse 0 et influence 92 %. En web : `cubic-bezier(0.28, 0.25, 0.08, 1)` (85 % de la taille à 0,2 s, 98 % à 0,5 s). Elle apparaît sur le mot dit (0 à +0,3 s), avec un pop léger.
+
 ## Règles qui ne bougent pas
 
 - Jamais de rotation ni de wiggle à l'entrée. La légère rotation n'existe que dans la réaction de chaîne.
 - Jamais d'arrêt net : ce qui est posé continue de dériver (+1 % d'échelle qui s'installe, puis +0,12 %/s).
 - Un contenant ne change jamais de taille d'un coup : il s'ouvre en E.kin (0,4 à 0,5 s) et son contenu apparaît dedans.
-- Texte : mot par mot, jamais lettre par lettre. Laisser lire au moins 1,5 s après l'entrée complète.
+- Texte : mot par mot, jamais lettre par lettre. Le dernier mot est posé au moins 1,5 s avant la coupe ou la sortie.

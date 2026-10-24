@@ -30,6 +30,9 @@
   const COURBES = {
     ekin: { css: "cubic-bezier(0.65, 0, 0.15, 1)", f: bezier(0.65, 0, 0.15, 1) },     // entrées, déplacements, caméras d'UI
     kinetic: { css: "cubic-bezier(0.75, 0, 0.11, 1)", f: bezier(0.75, 0, 0.11, 1) },  // pas d'une roue, d'un carrousel, sortie repliée
+    // Mesurées image par image sur les vidéos d'un YouTuber qui zoome bien (24/10/2026), voir zoom() et etiquette() plus bas.
+    zoom: { css: "cubic-bezier(0.35, 0, 0.27, 1)", f: bezier(0.35, 0, 0.27, 1) },     // zoom face cam : 25 / 75 / 95 % du trajet à 25 / 50 / 75 % du temps
+    etiquette: { css: "cubic-bezier(0.28, 0.25, 0.08, 1)", f: bezier(0.28, 0.25, 0.08, 1) }, // étiquette courte : sortie vive, fin très douce, sans rebond
   };
 
   // ENTRÉE d'une box (carte, fenêtre, dialogue) : elle se pose droite depuis (+60, +150) px en 0,6 s.
@@ -97,10 +100,35 @@
     return { y: o.hauteur * Math.exp(-8.71 * tl) * Math.cos(2.01 * TAU * tl), opacite: sat(tl / 0.115) };
   }
 
+  // LAISSER LIRE : le dernier mot d'un texte doit être posé au moins `lecture` s avant la coupe ou la sortie.
+  // Rend le facteur f (1 à 3) qui accélère tout le bloc (le temps du texte = t × f) quand il n'a pas la place.
+  // n = nombre de mots, debut / fin = heure du 1er mot et de la coupe (ou de la sortie), en s.
+  function compression(n, debut, fin, o) {
+    o = Object.assign({ decalage: 0.105, pose: 0.48, lecture: 1.5, max: 3 }, o);
+    const duree = Math.max(0, n - 1) * o.decalage + o.pose, dispo = fin - o.lecture - debut;
+    return borne(duree / Math.max(0.05, dispo), 1, o.max);
+  }
+
+  // ZOOM FACE CAM (44 zooms mesurés image par image sur un YouTuber, 24/10/2026) : 0,85 s, +8,5 %, toujours le même geste
+  // (lent → rapide → fin très douce), avant ou arrière, avec un whoosh grave un peu long qui démarre avec lui.
+  // Rend l'échelle à poser sur la face cam. QUAND le poser : au début d'une phrase qui fait tourner le récit (voir le skill).
+  function zoom(t, o) {
+    o = Object.assign({ duree: 0.85, de: 1, a: 1.085 }, o);
+    return lerp(o.de, o.a, COURBES.zoom.f(t / o.duree));
+  }
+
+  // ÉTIQUETTE de 2 mots qui apparaît sur le mot dit : naît à 65 % de sa taille, 85 % à 0,2 s, 98 % à 0,5 s,
+  // 100 % à 0,8 s, sans jamais dépasser (aucun rebond). Opacité en 2 images.
+  function etiquette(t, o) {
+    o = Object.assign({ depart: 0.65, duree: 0.8 }, o);
+    if (t < 0) return null;
+    return { echelle: lerp(o.depart, 1, COURBES.etiquette.f(t / o.duree)), opacite: sat(t / (2 / 30)), rotation: 0 };
+  }
+
   // DÉRIVE : une UI posée ne fige jamais (+1 % qui s'installe, puis +0,12 %/s).
   const derive = u => 1 + 0.010 * (1 - Math.exp(-Math.max(0, u) / 4)) + 0.0012 * Math.max(0, u);
 
-  const MOTION = { bezier, COURBES, entree, elastic, arrivee, reaction, ressort, motAMot, derive, impulsion };
+  const MOTION = { bezier, COURBES, entree, elastic, arrivee, reaction, ressort, motAMot, derive, impulsion, compression, zoom, etiquette };
   if (typeof module !== "undefined" && module.exports) module.exports = MOTION;
   else racine.MOTION = MOTION;
 })(typeof window !== "undefined" ? window : globalThis);
