@@ -67,8 +67,8 @@
       let y = e.y * 0.6, s = M.derive(t - 0.6), r = 0;
       lignes.forEach((_, i) => { const R = M.reaction(t - tLigne(i) - 0.3, i % 2 ? 1 : -1); y += R.y; s *= R.echelle; r += R.rotation; });
       carte.style.height = h + "px";
-      carte.style.top = (110 - h / 2) + "px";
-      pose(carte, e.x * 0.6, y, s, r, e.opacite);
+      // recentrage par transform (sous-pixel), jamais par top (pixels entiers)
+      pose(carte, e.x * 0.6, 110 - h / 2 + y, s, r, e.opacite);
       lignes.forEach((g, i) => {
         const a = M.motAMot(t - tLigne(i), 0, { hauteur: 14 });
         g.l.style.opacity = a.opacite; g.l.style.transform = `translateY(${a.y}px)`;
@@ -111,8 +111,7 @@
       traits.forEach((tr, i) => { tr.style.height = (PAS - CH) * relais((t - tE(i + 1) - 0.35) / 0.4) + "px"; });
       // la pile reste centrée sur les cartes posées : la caméra suit par un ressort doux
       const top = n ? lerp(cible(n - 1), cible(n), M.ressort(t - tE(n))) : cible(0);
-      pile.style.top = top + "px";
-      pose(pile, 0, y, s, r);
+      pose(pile, 0, top + y, s, r);
     };
   };
 
