@@ -2,7 +2,8 @@
 // Tout vient d'une de mes comps After Effects, échantillonnée image par image à 29,97 i/s puis validée sur mes vidéos :
 // - carte 821,5 × 475,7 px (en 1080p), rayon 9,19 % de la largeur ; fond = un dégradé noir → blanc à 32 % posé sur un flou
 //   d'arrière-plan (22 px, saturation 1,3, luminosité 1,08) ; brume bleue du haut vers le bas ; reflet bleu en diagonale (light sweep) ;
-//   arête du haut bleue ; halo froid fort au-dessus de la carte, doux tout autour (deep glow) ; scintillement ±3 % ; grain léger ;
+//   arête du haut bleue qui suit les coins ; halo froid fort au-dessus de la carte, doux tout autour (deep glow) ; scintillement ±3 % ;
+//   grain très léger ;
 // - entrée : la carte monte de 119 px (courbe échantillonnée ci-dessous) et apparaît en 0,23 s ; l'avatar suit (+45 px, 0,167 s après) ;
 //   chaque mot monte de 90 px sur un ressort exp(−8,14 t)·cos(2π·1,482 t) et apparaît en 0,15 s, un mot toutes les 0,101 s ;
 // - sortie : la carte descend de 112 px en accélérant et s'efface ; aucune rotation, ni à l'entrée ni après.
@@ -11,7 +12,8 @@
 // - un mode de fusion « plus-lighter » ne voit pas l'image derrière une carte isolée dans sa couche : les lumières sont des couleurs
 //   semi-transparentes équivalentes (exactes sur du noir).
 // UI.verre(conteneur, o) et UI.etiquette(conteneur, o) rendent jouer(t), t en secondes. Scène de travail : 1920 × 1080 px.
-// Besoin de motion.js chargé avant. Le verre a besoin d'une image DERRIÈRE lui (ta vidéo) : o.decor dessine un décor sobre pour la démo.
+// UI.habiller(boite, o) pose le même verre sur une boîte à toi (carte, pilule, fenêtre), avec un light sweep en option.
+// Besoin de motion.js chargé avant. Le verre a besoin d'une image DERRIÈRE lui (ta vidéo) : o.decor pose un fond sombre uni pour la démo.
 (function (racine) {
   const M = racine.MOTION || (typeof require !== "undefined" ? require("../motion/motion.js") : null);
   const UI = racine.UI || {};
@@ -86,49 +88,56 @@
     if (BRUIT) return BRUIT;
     const cv = document.createElement("canvas"); cv.width = cv.height = 192; const g = cv.getContext("2d"), im = g.createImageData(192, 192);
     let s = 1234567; const r = () => ((s = (s * 1103515245 + 12345) >>> 0) / 4294967296);
-    for (let i = 0; i < im.data.length; i += 4) { const n = Math.sqrt(-2 * Math.log(r() + 1e-9)) * Math.cos(TAU * r()), v = n > 0 ? 255 : 0; im.data[i] = im.data[i + 1] = im.data[i + 2] = v; im.data[i + 3] = borne(Math.abs(n) * 10, 0, 255); }
+    for (let i = 0; i < im.data.length; i += 4) { const n = Math.sqrt(-2 * Math.log(r() + 1e-9)) * Math.cos(TAU * r()), v = n > 0 ? 255 : 0; im.data[i] = im.data[i + 1] = im.data[i + 2] = v; im.data[i + 3] = borne(Math.abs(n) * 4, 0, 255); }
     g.putImageData(im, 0, 0); return (BRUIT = cv.toDataURL());
   }
-  // les couches du verre, sous le contenu : halo, 3 barres de lumière sur l'arête, flou + dégradé, brume, reflet, arête, grain
+  // les couches du verre, sous le contenu : halo, couronne de lumière au-dessus, flou + dégradé, brume, reflet, arête, grain
   function couches(parent, avant) {
     const abs = "position:absolute;left:0;top:0;pointer-events:none";
-    const L = {}; for (const n of ["halo", "b1", "b2", "b3", "bd", "brume", "reflet", "arete", "grain"]) L[n] = el("div", abs, null);
-    for (const n of ["halo", "b1", "b2", "b3", "bd", "brume", "reflet", "arete", "grain"]) parent.insertBefore(L[n], avant || null);
-    L.lum = [L.halo, L.b1, L.b2, L.b3, L.brume, L.reflet, L.arete];    // les lumières (le scintillement les module)
+    const L = {}; for (const n of ["halo", "couronne", "bd", "brume", "reflet", "arete", "grain"]) L[n] = el("div", abs, null);
+    for (const n of ["halo", "couronne", "bd", "brume", "reflet", "arete", "grain"]) parent.insertBefore(L[n], avant || null);
+    L.lueur = el("div", "position:absolute", L.couronne);
+    L.lum = [L.halo, L.couronne, L.brume, L.reflet, L.arete];    // les lumières (le scintillement les module)
     L.flick = 1;
     L.bd.style.backdropFilter = L.bd.style.webkitBackdropFilter = V.flou;
-    L.grain.style.backgroundImage = `url(${bruit()})`; L.grain.style.backgroundRepeat = "repeat";
+    L.grain.style.backgroundImage = `url(${bruit()})`; L.grain.style.backgroundRepeat = "repeat"; L.grain.style.backgroundSize = "96px 96px";
     return L;
   }
-  function forme(L, W, H, k, rayon) {
-    const cle = `${W}|${H}|${rayon}`;
+  // k = échelle du dessin (dégradé, reflet) ; kl = échelle des lumières (arête, halo, barres), k par défaut
+  function forme(L, W, H, k, rayon, kl) {
+    kl = kl ?? k;
+    const cle = `${W}|${H}|${rayon}|${kl}`;
     if (L.cle === cle) return; L.cle = cle;
     L.bd.style.background = degrade(W, H, V.rampe[0], V.rampe[1], k, [[0, `rgba(0,0,0,${V.verre})`], [1, `rgba(255,255,255,${V.verre})`]]);
     L.brume.style.background = "linear-gradient(180deg, rgba(0,93,255,0.086) 0%, rgba(0,128,255,0.024) 45%, rgba(0,0,0,0) 100%)";
     L.reflet.style.background = degrade(W, H, V.reflet[0], V.reflet[1], k,
       [[0, "rgba(0,0,0,0)"], [0.06, "rgba(32,128,255,0.063)"], [0.25, "rgba(44,133,255,0.180)"], [0.5, "rgba(46,135,255,0.392)"], [0.75, "rgba(44,133,255,0.180)"], [1, "rgba(0,0,0,0)"]]);
-    L.arete.style.background = `linear-gradient(180deg, rgba(0,122,255,0.902) 0px, rgba(0,92,255,0.392) ${f2(4 * k)}px, rgba(0,90,255,0.133) ${f2(12 * k)}px, rgba(0,0,0,0) ${f2(26 * k)}px)`;
+    // l'arête : la lumière du haut, À L'INTÉRIEUR de la forme (ombre intérieure qui suit les coins), douce, jamais un trait
+    const m = (v, min) => f2(Math.max(v * kl, min));
+    L.arete.style.boxShadow = `inset 0 ${m(9, 4)}px ${m(22, 10)}px -${m(7, 3)}px rgba(0,110,255,0.5), inset 0 ${m(2.5, 1.5)}px ${m(7, 4)}px -${m(2, 1)}px rgba(70,155,255,0.4)`;
     for (const e of [L.bd, L.brume, L.reflet, L.arete, L.grain, L.halo]) Object.assign(e.style, { width: f2(W) + "px", height: f2(H) + "px", borderRadius: f2(rayon) + "px" });
-    L.halo.style.boxShadow = `0 0 ${f2(12 * k)}px rgba(30,45,75,.55), 0 0 ${f2(110 * k)}px rgba(25,40,70,.75)`;
-    for (const [b, h, fl, c] of [[L.b1, 6, 7, "rgba(0,76,255,0.784)"], [L.b2, 14, 30, "rgba(0,70,255,0.647)"], [L.b3, 40, 120, "rgba(0,71,255,0.588)"]])
-      Object.assign(b.style, { left: f2(0.04 * W) + "px", width: f2(0.92 * W) + "px", height: f2(h * k) + "px", top: f2(-h * k / 2) + "px", background: c, filter: `blur(${f2(fl * k)}px)` });
+    L.halo.style.boxShadow = `0 0 ${f2(12 * kl)}px rgba(30,45,75,.55), 0 0 ${f2(110 * kl)}px rgba(25,40,70,.75)`;
+    // la couronne : le glow bleu AU-DESSUS de la carte. Ombres portées de la forme elle-même (elles suivent les coins arrondis),
+    // poussées vers le haut, puis effacées vers le bas par un masque : fort au-dessus, rien sous la mi-hauteur.
+    const ombres = [[m(2, 1), m(14, 8), "rgba(0,90,255,0.55)"], [m(6, 3), m(60, 18), "rgba(0,80,255,0.45)"], [m(16, 6), m(220, 34), "rgba(0,71,255,0.4)"]];
+    const P = Math.ceil(ombres[2][0] + ombres[2][1] + 10), masque = `linear-gradient(180deg, #000 0, #000 ${f2(P + 0.1 * H)}px, transparent ${f2(P + 0.55 * H)}px)`;
+    Object.assign(L.couronne.style, { left: -P + "px", top: -P + "px", width: f2(W + 2 * P) + "px", height: f2(H + 2 * P) + "px", maskImage: masque, webkitMaskImage: masque });
+    Object.assign(L.lueur.style, { left: P + "px", top: P + "px", width: f2(W) + "px", height: f2(H) + "px", borderRadius: f2(rayon) + "px",
+      boxShadow: ombres.map(([y, b, c]) => `0 -${y}px ${b}px ${c}`).join(", ") });
   }
   // scintillement (±3 % à 30 Hz) et grain qui bouge, tirés du numéro d'image : déterministes
   function vie(L, image) {
     const h = Math.sin(image * 12.9898 + 78.233) * 43758.5453;
     L.flick = 1 + V.flicker * ((h - Math.floor(h)) * 2 - 1);
-    L.grain.style.backgroundPosition = `${(image * 73) % 192}px ${(image * 151) % 192}px`;
+    L.grain.style.backgroundPosition = `${(image * 37) % 96}px ${(image * 75) % 96}px`;
   }
   // l'opacité se pose couche par couche (une carte en opacité < 1 perdrait son flou d'arrière-plan)
   function opacite(parent, op, L) {
     for (const e of parent.children) e.style.opacity = f4(op * (L.lum.includes(e) ? L.flick : 1));
   }
-  // un décor sobre pour voir le verre travailler (dans ta vidéo, c'est ta face cam qui est derrière)
+  // pour la démo, un fond sombre uni et rien d'autre (dans ta vidéo, c'est ta face cam qui est derrière)
   function decor(sc) {
     el("div", "position:absolute;inset:0;background:radial-gradient(circle at 50% 90%, #272727 0, #000 120%)", sc);
-    el("div", "position:absolute;left:1270px;top:120px;width:84px;height:860px;border-radius:42px;background:linear-gradient(90deg,#9fe8ff,#ffffff 45%,#c9f2ff);box-shadow:0 0 60px 18px rgba(80,200,255,.45),0 0 220px 60px rgba(40,140,255,.28)", sc);
-    el("div", "position:absolute;left:1500px;top:560px;width:420px;height:420px;border-radius:50%;background:radial-gradient(circle,rgba(255,150,60,.55),rgba(255,120,40,0) 70%)", sc);
-    el("div", "position:absolute;left:1580px;top:200px;width:260px;height:520px;border:3px solid rgba(255,255,255,.08);border-radius:8px", sc);
   }
   const scene = c => el("div", `position:absolute;left:0;top:0;width:1920px;height:1080px;overflow:hidden;font-family:${POLICE};color:#fff`, c);
 
@@ -180,6 +189,34 @@
       const sortie = M.COURBES.ekin.f((t - (o.t1 - 0.3)) / 0.3);             // sortie : se resserre un peu et s'efface en 0,3 s
       pil.style.transform = `scale(${f4(e.echelle * (1 - 0.08 * sortie))})`;
       vie(L, Math.round(t * FPS)); opacite(pil, e.opacite * (1 - sortie), L);
+    };
+  };
+
+  // 3. HABILLER UNE BOÎTE À TOI : une carte, une pilule, une fenêtre prend le même verre, son contenu passe devant.
+  // La boîte doit être positionnée (absolute ou relative). Rend vivre(t, op, balayage), à appeler à chaque image :
+  // t en secondes (scintillement, grain), op = opacité, balayage = 0 → 1 fait traverser un light sweep bleu (null : aucun).
+  // Le halo et l'arête débordent de la boîte : un parent en overflow: hidden trop serré couperait le glow. Dans un petit cadre,
+  // o.k (échelle des lumières, largeur / 821,5 par défaut) les resserre pour qu'elles s'éteignent avant son bord ; le dégradé ne change pas.
+  // Sur une page web, la couronne déborde aussi de la page : pose overflow-x: clip sur la section qui contient la boîte.
+  UI.habiller = (boite, o) => {
+    o = Object.assign({ rayon: null, k: null }, o);
+    for (const c of boite.children) {
+      const pos = c.isConnected ? getComputedStyle(c).position : c.style.position;
+      if (!pos || pos === "static") { c.style.position = "relative"; c.style.zIndex = 1; }
+    }
+    const L = couches(boite, boite.firstChild);
+    // le light sweep : une bande bleue qui traverse toute la boîte en biais, contenu compris (comme un CC Light Sweep), rognée à sa forme
+    const fen = el("div", "position:absolute;left:0;top:0;z-index:2;overflow:hidden;pointer-events:none;visibility:hidden", boite);
+    const bande = el("div", "position:absolute;left:0;top:-50%;height:200%;width:40%;background:linear-gradient(90deg, rgba(0,105,255,0), rgba(0,105,255,0.22) 30%, rgba(120,185,255,0.5) 50%, rgba(0,105,255,0.22) 70%, rgba(0,105,255,0))", fen);
+    L.lum.push(fen);
+    return (t, op, balayage) => {
+      const W = boite.offsetWidth, H = boite.offsetHeight, r = o.rayon ?? 0.0919 * W;
+      forme(L, W, H, W / V.W, r, o.k);
+      Object.assign(fen.style, { width: f2(W) + "px", height: f2(H) + "px", borderRadius: f2(r) + "px" });
+      const u = balayage == null ? 0 : M.COURBES.ekin.f(balayage);
+      fen.style.visibility = u > 0 && u < 1 ? "visible" : "hidden";
+      bande.style.transform = `translateX(${f2((u * 1.8 - 0.6) * W)}px) rotate(20deg)`;
+      vie(L, Math.round(t * FPS)); opacite(boite, op ?? 1, L);
     };
   };
 

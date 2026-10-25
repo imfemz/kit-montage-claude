@@ -8,7 +8,7 @@ Deux clés de position. Clic droit sur les clés → Assistant d'image clé → 
 
 | Clé | Influence sortante | Influence entrante | Vitesse |
 |---|---|---|---|
-| 1re (départ, +60 / +150 px) | 65 % | — | 0 |
+| 1re (départ, +150 px, à la verticale) | 65 % | — | 0 |
 | 2e (posée) | — | 85 % | 0 |
 
 Durée : 0,6 s pour une box, 0,3 s pour un petit objet. Opacité : 46 → 100 % en 0,12 s.

@@ -62,7 +62,7 @@ Sans commande précise, déduis l'étape de la demande. L'ordre normal : derush 
 
 Pars d'un composant existant avant d'en inventer un : `ui/composants.js` (liste qui se coche, enchaînement d'outils, annotation au stylet, carte « S'abonner », pilule, sélection), `ui/verre.js` (carte en verre au glow bleu, étiquette de 2 mots) et `sous-titres/sous-titres.js` (variante 1, mot-clé bleu, sélection). Ouvre `galerie.html` pour les voir. Pour le reste, lis `motion/after-effects.md` (After Effects) ou utilise `motion/motion.js` (web, Remotion, HyperFrames, Canvas). Les règles :
 
-- **Entrée d'une box** : lent → rapide → lent (`E.kin`, `cubic-bezier(0.65, 0, 0.15, 1)`), 0,6 s, depuis (+60, +150) px, droite. Opacité 46 → 100 % en 0,12 s. Petit objet : 0,3 s.
+- **Entrée d'une box** : lent → rapide → lent (`E.kin`, `cubic-bezier(0.65, 0, 0.15, 1)`), 0,6 s, à la VERTICALE depuis 150 px plus bas (jamais en diagonale). Opacité 46 → 100 % en 0,12 s. Petit objet : 0,3 s.
 - **Rebond d'arrivée** : la signature Elastic (0,05 · 2 · 4), sur une arrivée courte et lancée. Jamais de rotation ni de wiggle à l'entrée.
 - **Réaction de chaîne** : quand un élément se branche (ligne, message, étape, clic), toute l'UI fait 5,5 px · +1,3 % · 0,55°, période 0,58 s, sens alterné.
 - **Pas d'une roue, carrousel, sortie** : `kinetic`, `cubic-bezier(0.75, 0, 0.11, 1)`.
@@ -70,6 +70,7 @@ Pars d'un composant existant avant d'en inventer un : `ui/composants.js` (liste 
 - **Laisser lire** : le DERNIER mot est posé au moins 1,5 s avant la coupe ou la sortie. S'il n'a pas la place, accélère tout le bloc (`MOTION.compression`, jusqu'à × 3) ; au-delà, raccourcis le texte ou allonge le plan.
 - **Carte en verre** (`UI.verre`) : elle monte DROIT de 119 px (courbe échantillonnée), apparaît en 0,23 s, l'avatar suit, puis chaque mot monte ; elle sort en descendant. Aucune rotation, ni à l'entrée ni après. L'opacité se pose couche par couche (une carte en opacité < 1 perd son flou d'arrière-plan).
 - **Étiquette de 2 mots** (`UI.etiquette`, `MOTION.etiquette`) : naît à 65 % de sa taille depuis le côté de la tête, se pose en 0,8 s, sans rebond.
+- **Ton UI à toi en verre** (`UI.habiller`) : pose le même verre sur n'importe quelle boîte ; un light sweep bleu peut la traverser à son arrivée. Le glow déborde de la boîte : jamais dans un parent qui le rogne.
 - **Sur le face cam** : un élément arrive SUR le mot qu'il illustre (0 à +0,3 s), à hauteur de tête ou d'épaule, du côté libre, au milieu de l'espace entre le corps (à la hauteur de l'élément) et le bord de l'écran. Jamais sur le visage.
 - **Derrière l'épaule** : une carte peut passer derrière la personne. Pose sa colonne 30 px après la tête et descends-la jusqu'à ce que l'épaule touche sa marge ; détoure la personne (par exemple avec Robust Video Matting) et pose ce calque au-dessus de la carte, seulement pendant qu'elle est visible.
 - **Jamais d'arrêt net** : ce qui est posé dérive (`MOTION.derive`). Un contenant ne change jamais de taille d'un coup.

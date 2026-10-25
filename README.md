@@ -6,7 +6,21 @@ Présentation animée des commandes : https://claude.ai/artifact/LuNdTPL28t9CwLe
 
 ## Installation
 
-Il te faut [Claude Code](https://claude.com/claude-code), Python 3.10+ et ffmpeg.
+Le plus simple : colle ce prompt dans [Claude Code](https://claude.com/claude-code), il installe tout seul. Ça marche aussi avec les autres agents qui travaillent sur ton ordinateur, comme Codex de ChatGPT ou Cursor.
+
+```text
+Installe-moi le kit montage Claude : https://github.com/imfemz/kit-montage-claude
+
+1. Clone le dépôt dans un dossier kit-montage-claude.
+2. Vérifie Python 3.10 ou plus récent et ffmpeg ; installe ce qui manque (brew sur Mac, winget sur Windows, apt sur Linux).
+3. Crée l'environnement .venv dans le dossier et installe requirements.txt dedans.
+4. Lance les tests du kit et dis-moi s'ils passent.
+5. Lis .claude/skills/montage/SKILL.md : c'est la méthode à suivre pour tous mes montages.
+
+Termine en me disant où déposer ma vidéo.
+```
+
+À la main, il te faut Claude Code, Python 3.10+ et ffmpeg :
 
 ```bash
 git clone https://github.com/imfemz/kit-montage-claude.git

@@ -35,11 +35,12 @@
     etiquette: { css: "cubic-bezier(0.28, 0.25, 0.08, 1)", f: bezier(0.28, 0.25, 0.08, 1) }, // étiquette courte : sortie vive, fin très douce, sans rebond
   };
 
-  // ENTRÉE d'une box (carte, fenêtre, dialogue) : elle se pose droite depuis (+60, +150) px en 0,6 s.
+  // ENTRÉE d'une box (carte, fenêtre, dialogue) : elle monte à la VERTICALE depuis 150 px plus bas et se pose en 0,6 s.
+  // Jamais en diagonale : dx reste à 0 (le réglage existe pour un cas à part, pas pour l'entrée d'une box).
   // L'opacité ne part pas de 0 : 46 → 100 % en 0,12 s ; c'est le mouvement qui fait apparaître.
   // Petit objet (tuile, coche, icône) : même courbe en 0,3 s, a = 0,3.
   function entree(t, o) {
-    o = Object.assign({ dx: 60, dy: 150, duree: 0.6, a: 1 }, o);
+    o = Object.assign({ dx: 0, dy: 150, duree: 0.6, a: 1 }, o);
     if (t < 0) return null;
     const p = COURBES.ekin.f(t / o.duree);
     return {

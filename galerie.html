@@ -47,7 +47,7 @@
     return ech;
   }
   UI.LISTE.forEach(([nom, titre, texte]) => { const c = carte(ui, "UI." + nom, titre, texte); joueurs.push({ f: UI[nom](c), boucle: 4.5 }); });
-  // le verre : une image HD (1920 × 1080) mise à l'échelle ; il lui faut une image derrière lui (ici un décor sobre)
+  // le verre : une image HD (1920 × 1080) mise à l'échelle ; il lui faut une image derrière lui (ici un fond sombre uni)
   UI.VERRE.forEach(([nom, titre, texte, o]) => { const c = carte(verre, "UI." + nom, titre, texte, true, true); joueurs.push({ f: UI[nom](c, o), boucle: nom === "verre" ? 6.2 : 4.2 }); });
   const phrases = [["Le rythme décide tout", { cle: 1 }], ["Coupe dans les creux", { cle: 3 }], ["Le carnet retient tout", { cle: 1 }]];
   SOUS_TITRES.LISTE.forEach(([nom, titre, texte], i) => {
